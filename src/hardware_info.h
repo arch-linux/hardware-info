@@ -10,6 +10,22 @@
 #define MODEL_LENGTH 256
 #define VENDOR_LENGTH 64
 
+typedef enum {
+    VIRT_NONE,
+    VIRT_KVM,
+    VIRT_QEMU,
+    VIRT_VMWARE,
+    VIRT_VIRTUALBOX,
+    VIRT_XEN,
+    VIRT_HYPERV,
+    VIRT_DOCKER,
+    VIRT_LXC,
+    VIRT_OPENVZ,
+    VIRT_PARALLELS,
+    VIRT_CLOUD,
+    VIRT_UNKNOWN
+} VirtualizationType;
+
 typedef struct {
     char system_uuid[UUID_LENGTH];
     char motherboard_serial[SERIAL_LENGTH];
@@ -22,6 +38,9 @@ typedef struct {
     uint32_t cpu_stepping;
     uint64_t cpu_microcode;
     int is_arm;
+    int is_virtual;
+    VirtualizationType virt_type;
+    char hypervisor_vendor[VENDOR_LENGTH];
 } HardwareInfo;
 
 typedef struct {
