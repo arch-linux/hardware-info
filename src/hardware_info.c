@@ -280,7 +280,17 @@ static int is_raspberry_pi() {
 }
 
 static void read_raspberry_pi_info(HardwareInfo *hw) {
-    char buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE] = {0};
+    
+    // Initialize all strings to prevent double-free
+    safe_strcpy(hw->cpu_model, "Unknown", MODEL_LENGTH);
+    safe_strcpy(hw->cpu_vendor, "ARM", VENDOR_LENGTH);
+    safe_strcpy(hw->system_uuid, "Unknown", UUID_LENGTH);
+    safe_strcpy(hw->motherboard_serial, "Unknown", SERIAL_LENGTH);
+    safe_strcpy(hw->product_name, "Raspberry Pi", MODEL_LENGTH);
+    safe_strcpy(hw->bios_vendor, "Raspberry Pi", VENDOR_LENGTH);
+    safe_strcpy(hw->bios_version, "Unknown", VENDOR_LENGTH);
+
     FILE *fp = fopen("/proc/cpuinfo", "r");
     if (fp) {
         while (fgets(buffer, sizeof(buffer), fp)) {
@@ -288,6 +298,7 @@ static void read_raspberry_pi_info(HardwareInfo *hw) {
             if ((value = strstr(buffer, ": "))) {
                 value += 2;
                 trim(value);
+                
                 if (strncmp(buffer, "Hardware", 8) == 0) {
                     safe_strcpy(hw->cpu_model, value, MODEL_LENGTH);
                 }
@@ -297,22 +308,26 @@ static void read_raspberry_pi_info(HardwareInfo *hw) {
                 else if (strncmp(buffer, "Serial", 6) == 0) {
                     safe_strcpy(hw->system_uuid, value, UUID_LENGTH);
                 }
-                else if (strncmp(buffer, "model name", 10) == 0) {
-                    safe_strcpy(hw->cpu_model, value, MODEL_LENGTH);
+                else if (strncmp(buffer, "Model", 5) == 0) {
+                    safe_strcpy(hw->product_name, value, MODEL_LENGTH);
                 }
             }
+            memset(buffer, 0, sizeof(buffer));  // Clear buffer after each line
         }
         fclose(fp);
     }
 
+    // Read model from device tree if available
     if (read_file_line(RASPBERRY_PI_MODEL, buffer, sizeof(buffer))) {
         safe_strcpy(hw->product_name, buffer, MODEL_LENGTH);
     }
     
-    safe_strcpy(hw->cpu_vendor, "ARM", VENDOR_LENGTH);
     hw->is_arm = 1;
     hw->is_virtual = 0;
     hw->virt_type = VIRT_NONE;
+    hw->cpu_family = 0;
+    hw->cpu_stepping = 0;
+    hw->cpu_microcode = 0;
 }
 
 static void read_cpu_info(HardwareInfo *hw) {
@@ -403,11 +418,14 @@ static void calculate_cpu_usage(CoreInfo *prev, CoreInfo *curr) {
 void collect_hardware_info(HardwareInfo *info) {
     memset(info, 0, sizeof(HardwareInfo));
     
-    info->virt_type = detect_virtualization();
-    
     if (is_raspberry_pi()) {
         read_raspberry_pi_info(info);
-    } else if (info->virt_type != VIRT_NONE) {
+        return;  // Early return for Raspberry Pi
+    }
+    
+    info->virt_type = detect_virtualization();
+    
+    if (info->virt_type != VIRT_NONE) {
         get_vm_info(info);
         read_cpu_info(info);
     } else {
@@ -416,6 +434,7 @@ void collect_hardware_info(HardwareInfo *info) {
         read_cpu_info(info);
     }
 }
+
 
 void collect_system_info(SystemInfo *info, SystemInfo *prev_info) {
     FILE *fp;
