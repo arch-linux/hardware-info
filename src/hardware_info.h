@@ -10,7 +10,6 @@
 #define MODEL_LENGTH 256
 #define VENDOR_LENGTH 64
 
-
 typedef struct {
     char system_uuid[UUID_LENGTH];
     char motherboard_serial[SERIAL_LENGTH];
@@ -22,8 +21,8 @@ typedef struct {
     uint32_t cpu_family;
     uint32_t cpu_stepping;
     uint64_t cpu_microcode;
+    int is_arm;
 } HardwareInfo;
-
 
 typedef struct {
     uint64_t user;
@@ -37,13 +36,11 @@ typedef struct {
     uint64_t total;
 } CPUStats;
 
-
 typedef struct {
     double usage;
     int temperature;
     CPUStats stats;
 } CoreInfo;
-
 
 typedef struct {
     HardwareInfo hw_info;
@@ -57,9 +54,8 @@ typedef struct {
     uint64_t swap_free;
 } SystemInfo;
 
-
 void collect_hardware_info(HardwareInfo *info);
 void collect_system_info(SystemInfo *info, SystemInfo *prev_info);
 void output_json(const SystemInfo *info);
 
-#endif 
+#endif
